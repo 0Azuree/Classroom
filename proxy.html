@@ -93,7 +93,8 @@
     
     <!-- Proxy Result Container (Content will be inserted here) -->
     <div id="proxy-result-container" class="hidden">
-        <iframe id="proxy-iframe" title="Proxied Content" sandbox="allow-same-origin allow-scripts allow-forms"></iframe>
+        <!-- Removed sandbox to allow content to execute more freely, increasing compatibility -->
+        <iframe id="proxy-iframe" title="Proxied Content"></iframe>
     </div>
 
     <script>
@@ -116,7 +117,7 @@
                     iframeDoc.write(content);
                     iframeDoc.close();
 
-                    // FIX: Safely check if the iframe body exists and has content
+                    // Safely check if the iframe body exists and has content
                     if (iframeDoc.body && iframeDoc.body.children.length === 0) {
                         iframeDoc.body.innerHTML = '<div style="padding: 20px; font-family: sans-serif;">Could not display proxied content. The target site may be actively blocking proxies or loading external resources that failed.</div>';
                     }
