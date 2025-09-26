@@ -38,6 +38,8 @@
         /* Chat history container */
         .chat-container {
             flex-grow: 1;
+            /* Added padding-top for better look on small screens */
+            padding: 1rem; 
             padding-bottom: 8rem; /* Space for the floating box */
         }
 
@@ -61,7 +63,7 @@
     </header>
 
     <!-- Main chat container -->
-    <main class="chat-container flex flex-col overflow-hidden p-4">
+    <main class="chat-container flex flex-col overflow-hidden">
         <div id="chat-history" class="flex-1 overflow-y-auto space-y-4">
             <!-- Chat messages will be added here -->
         </div>
@@ -70,9 +72,9 @@
     <!-- Floating Input Form -->
     <div class="floating-input-box p-4 border border-white border-opacity-50 rounded-full mb-4">
         <!-- Image preview container -->
-        <div id="image-preview-container" class="mb-2 hidden">
-            <img id="image-preview" src="#" alt="Image Preview" class="max-h-32 rounded-lg object-cover">
-            <button id="remove-image-btn" class="absolute top-2 right-2 text-white bg-red-600 rounded-full w-6 h-6 flex items-center justify-center text-xs">
+        <div id="image-preview-container" class="mb-2 hidden relative p-2 bg-zinc-800 rounded-lg">
+            <img id="image-preview" src="#" alt="Image Preview" class="max-h-32 rounded-lg object-contain w-auto mx-auto">
+            <button id="remove-image-btn" class="absolute top-1 right-1 text-white bg-red-600 hover:bg-red-700 rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold transition-colors">
                 &times;
             </button>
         </div>
@@ -160,7 +162,8 @@
                         canvas.toBlob(blob => {
                             const reader = new FileReader();
                             reader.onloadend = () => resolve(reader.result);
-                            reader.readAsDataURL(blob);
+                            // Use image/jpeg for reliable base64 encoding and size reduction
+                            reader.readAsDataURL(blob); 
                         }, 'image/jpeg', quality);
                     };
                     img.src = event.target.result;
@@ -179,6 +182,9 @@
             // Add user message to chat history
             appendMessage('user', prompt, uploadedImage);
             userInput.value = '';
+            
+            // Store the current image data temporarily and clear the input *before* API call
+            const currentImage = uploadedImage; 
             removeImage();
 
             const loadingIndicator = document.createElement('div');
@@ -188,13 +194,19 @@
             chatHistory.scrollTop = chatHistory.scrollHeight;
 
             const contents = [];
-            if (hasImage) {
-                contents.push({
-                    inlineData: {
-                        mimeType: 'image/jpeg', // Assuming jpeg for simplicity
-                        data: uploadedImage.split(',')[1] // Get base64 data
-                    }
-                });
+            if (currentImage) {
+                 // FIX: Ensure currentImage is a string and contains the comma separator before splitting
+                if (typeof currentImage === 'string' && currentImage.includes(',')) {
+                    contents.push({
+                        inlineData: {
+                            mimeType: 'image/jpeg', 
+                            data: currentImage.split(',')[1] // Get base64 data
+                        }
+                    });
+                } else {
+                    console.error("Image data format error: Skipping image.");
+                    // Skip image from being sent
+                }
             }
             if (prompt !== "") {
                 contents.push({ text: prompt });
@@ -235,6 +247,7 @@
 
         function appendMessage(sender, text, imageData = null) {
             const messageContainer = document.createElement('div');
+            // User message background: dark gray, AI message background: slightly darker gray
             messageContainer.className = `p-3 rounded-xl max-w-[80%] ${sender === 'user' ? 'bg-zinc-800 self-end ml-auto' : 'bg-zinc-900 border border-zinc-700'}`;
             messageContainer.style.wordBreak = "break-word";
             
@@ -252,7 +265,8 @@
             }
             
             chatHistory.appendChild(messageContainer);
-            chatHistory.scrollTop = chatHistory.scrollHeight;
+            // Automatic scrolling fix: always scroll to bottom after appending a message
+            chatHistory.scrollTop = chatHistory.scrollHeight; 
         }
 
         async function handleImage(file) {
