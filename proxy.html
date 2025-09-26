@@ -43,12 +43,14 @@
             height: calc(100vh - 70px);
             z-index: 5;
             display: none; /* Initially hidden */
-            padding: 1rem;
-            overflow-y: auto; /* Allow scrolling for content */
-            color: black; /* Default color for embedded HTML */
-            background-color: white; /* Ensure visibility of proxied content */
         }
         
+        #proxy-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
         /* Ensure the body takes up the full screen */
         body {
             height: 100vh;
@@ -90,7 +92,7 @@
     
     <!-- Proxy Result Container (Content will be inserted here) -->
     <div id="proxy-result-container" class="hidden">
-        <!-- Content inserted by JavaScript -->
+        <iframe id="proxy-iframe" sandbox="allow-scripts allow-forms allow-same-origin"></iframe>
     </div>
 
     <script>
@@ -99,6 +101,7 @@
             const proxyButton = document.getElementById('proxy-button');
             const initialForm = document.getElementById('initial-form');
             const proxyResultContainer = document.getElementById('proxy-result-container');
+            const proxyIframe = document.getElementById('proxy-iframe');
             const errorMessage = document.getElementById('error-message');
             const loadingMessage = document.getElementById('loading-message');
 
@@ -122,28 +125,28 @@
                 errorMessage.classList.add('hidden');
                 loadingMessage.classList.remove('hidden');
                 
-                // This is the URL path for your Netlify Function
                 const functionUrl = `/.netlify/functions/proxy`;
 
                 try {
                     const response = await fetch(functionUrl, {
                         method: 'POST',
                         headers: {
-                            'Content-Type': 'application/json' // Essential for the function to read the body
+                            'Content-Type': 'application/json'
                         },
-                        body: JSON.stringify({ url: url }) // Send the URL in the body
+                        body: JSON.stringify({ url: url })
                     });
 
-                    // We expect the function to return JSON
                     const data = await response.json();
 
                     if (data.error) {
-                        // Function returned a JSON error
                         throw new Error(`Proxy error: ${data.error}`);
                     }
                     
-                    // Success! Display the content
-                    proxyResultContainer.innerHTML = data.content;
+                    // Success! Display the content in the iframe
+                    const content = data.content;
+                    
+                    // Get the iframe's document and write the proxied HTML content to it
+                    proxyIframe.srcdoc = content;
                     
                     // Hide the input form and show the result view
                     initialForm.classList.add('hidden');
