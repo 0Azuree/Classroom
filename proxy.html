@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Classroom | Proxy</title>
-    <!-- Favicon link -->a
+    <!-- Favicon link -->
     <link rel="icon" type="image/png" href="favicon.png">
     
     <!-- Google Fonts for a modern look -->
@@ -31,28 +31,52 @@
         .glowing-input:focus {
             box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
         }
+
+        /* Custom styles for the result view */
+        #proxy-result-container {
+            position: fixed;
+            top: 70px; /* Space for header */
+            left: 0;
+            right: 0;
+            bottom: 0;
+            width: 100%;
+            height: calc(100vh - 70px);
+            z-index: 5;
+            display: none; /* Initially hidden */
+            padding: 1rem;
+            overflow-y: auto; /* Allow scrolling for content */
+            color: black; /* Default color for embedded HTML */
+            background-color: white; /* Default background for embedded HTML */
+        }
+        
+        /* Ensure the body takes up the full screen */
+        body {
+            height: 100vh;
+            overflow: hidden; /* Prevent body scroll */
+        }
     </style>
 </head>
-<body class="bg-black text-white font-sans flex flex-col items-center justify-center min-h-screen p-4">
+<body class="bg-black text-white font-sans flex flex-col items-center justify-center h-screen p-0">
     
-    <!-- Header with Back Link -->
-    <header class="fixed top-0 left-0 right-0 p-4 border-b border-zinc-700 flex justify-between items-center bg-black bg-opacity-80 backdrop-blur-sm z-10">
+    <!-- Header with Back Link and Title -->
+    <header class="fixed top-0 left-0 right-0 p-4 border-b border-zinc-700 flex justify-between items-center bg-black z-20 h-[70px]">
         <h1 class="text-2xl font-bold text-glow">Web Proxy</h1>
         <a href="index.html" class="text-white hover:text-zinc-400 transition-colors duration-300">
             &larr; Go Back
         </a>
     </header>
 
-    <!-- Main Content centered on the page -->
-    <div class="text-center mt-20 p-6 md:p-8 w-full max-w-2xl">
-        <p class="text-lg mb-8 text-zinc-400">
-            The Web Proxy is not yet operational. You can use the form below to enter a URL once the backend is ready.
+    <!-- Initial Input Form -->
+    <div id="initial-form" class="text-center p-6 md:p-8 w-full max-w-2xl z-10 flex flex-col items-center justify-center h-full">
+        <p class="text-lg mb-8 text-zinc-400 text-glow">
+            Enter the URL of the website you wish to access.
         </p>
         
-        <!-- Input Form (Placeholder for Proxy Functionality) -->
-        <div class="flex flex-col space-y-4">
-            <input type="url" id="proxy-url" placeholder="Enter URL (e.g., https://example.com)"
-                   class="glowing-input bg-zinc-900 border border-white border-opacity-30 rounded-full py-3 px-6 text-white text-lg focus:outline-none focus:border-white w-full">
+        <!-- Input Form -->
+        <div class="flex flex-col space-y-4 w-full">
+            <input type="text" id="proxy-url" placeholder="Enter URL (e.g., example.com or https://example.com)"
+                   class="glowing-input bg-zinc-900 border border-white border-opacity-30 rounded-full py-3 px-6 text-white text-lg focus:outline-none focus:border-white w-full"
+                   required>
             
             <button id="proxy-button"
                     class="glowing-input bg-white text-black py-3 px-8 rounded-full text-xl font-semibold hover:bg-zinc-200 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-white focus:ring-opacity-50">
@@ -60,10 +84,86 @@
             </button>
         </div>
 
-        <!-- Placeholder Warning/Note -->
-        <div class="mt-8 p-4 bg-zinc-900 border border-zinc-700 rounded-lg text-sm text-zinc-500 text-left">
-            <p><strong>Note on Web Proxies:</strong> Full proxy functionality that bypasses network filters requires complex server-side infrastructure. This page provides the front-end user experience.</p>
-        </div>
+        <div id="error-message" class="mt-4 text-sm text-red-500 hidden text-glow"></div>
+        <div id="loading-message" class="mt-4 text-sm text-white hidden text-glow">Loading... Please wait.</div>
     </div>
+    
+    <!-- Proxy Result Container (Content will be inserted here) -->
+    <div id="proxy-result-container" class="hidden">
+        <!-- Content inserted by JavaScript -->
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlInput = document.getElementById('proxy-url');
+            const proxyButton = document.getElementById('proxy-button');
+            const initialForm = document.getElementById('initial-form');
+            const proxyResultContainer = document.getElementById('proxy-result-container');
+            const errorMessage = document.getElementById('error-message');
+            const loadingMessage = document.getElementById('loading-message');
+
+            /**
+             * Attempts to fetch the URL content via the Netlify serverless function.
+             */
+            async function loadProxy() {
+                let url = urlInput.value.trim();
+
+                if (!url) {
+                    errorMessage.textContent = "Please enter a URL.";
+                    errorMessage.classList.remove('hidden');
+                    return;
+                }
+
+                // Simple protocol handling
+                if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                    url = 'https://' + url;
+                }
+                
+                errorMessage.classList.add('hidden');
+                loadingMessage.classList.remove('hidden');
+                
+                // This is the URL path for your Netlify Function
+                const functionUrl = `/.netlify/functions/proxy?url=${encodeURIComponent(url)}`;
+
+                try {
+                    const response = await fetch(functionUrl);
+
+                    if (!response.ok) {
+                        const errorBody = await response.json();
+                        throw new Error(`Proxy error: ${errorBody.error || response.statusText}`);
+                    }
+
+                    const htmlContent = await response.text();
+                    
+                    // Display the content
+                    proxyResultContainer.innerHTML = htmlContent;
+                    
+                    // Hide the input form and show the result view
+                    initialForm.classList.add('hidden');
+                    proxyResultContainer.classList.remove('hidden');
+
+                } catch (error) {
+                    console.error('Fetch Error:', error);
+                    errorMessage.textContent = `Failed to load site. Ensure the URL is correct and the Netlify Function is deployed. (${error.message})`;
+                    errorMessage.classList.remove('hidden');
+                    initialForm.classList.remove('hidden');
+                    proxyResultContainer.classList.add('hidden');
+                } finally {
+                    loadingMessage.classList.add('hidden');
+                }
+            }
+
+            // Event listener for the button click
+            proxyButton.addEventListener('click', loadProxy);
+
+            // Event listener for the Enter key press in the input field
+            urlInput.addEventListener('keypress', (event) => {
+                if (event.key === 'Enter') {
+                    event.preventDefault(); 
+                    loadProxy();
+                }
+            });
+        });
+    </script>
 </body>
 </html>
