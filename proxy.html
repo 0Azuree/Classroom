@@ -43,10 +43,13 @@
             height: calc(100vh - 70px);
             z-index: 5;
             display: none; /* Initially hidden */
-            padding: 1rem;
-            overflow-y: auto; /* Allow scrolling for content */
-            color: black; /* Default color for embedded HTML */
-            background-color: white; /* Ensure visibility of proxied content */
+            background-color: white; /* Ensure visibility */
+        }
+        
+        #proxy-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
         }
         
         /* Ensure the body takes up the full screen */
@@ -90,7 +93,7 @@
     
     <!-- Proxy Result Container (Content will be inserted here) -->
     <div id="proxy-result-container" class="hidden">
-        <!-- Content will be inserted by JavaScript using innerHTML -->
+        <iframe id="proxy-iframe" title="Proxied Content" sandbox="allow-same-origin allow-scripts allow-forms"></iframe>
     </div>
 
     <script>
@@ -99,8 +102,28 @@
             const proxyButton = document.getElementById('proxy-button');
             const initialForm = document.getElementById('initial-form');
             const proxyResultContainer = document.getElementById('proxy-result-container');
+            const proxyIframe = document.getElementById('proxy-iframe');
             const errorMessage = document.getElementById('error-message');
             const loadingMessage = document.getElementById('loading-message');
+
+            /**
+             * Writes the HTML content into the iframe's document.
+             */
+            function writeToIframe(content) {
+                try {
+                    const iframeDoc = proxyIframe.contentDocument || proxyIframe.contentWindow.document;
+                    iframeDoc.open();
+                    iframeDoc.write(content);
+                    iframeDoc.close();
+
+                    // Check if content was actually written (basic check)
+                    if (iframeDoc.body.children.length === 0) {
+                        iframeDoc.body.innerHTML = '<div style="padding: 20px; font-family: sans-serif;">Could not display proxied content. The target site may be actively blocking proxies or loading external resources that failed.</div>';
+                    }
+                } catch (e) {
+                    console.error("Error writing to iframe:", e);
+                }
+            }
 
             /**
              * Attempts to fetch the URL content via the Netlify serverless function.
@@ -139,16 +162,8 @@
                         throw new Error(`Proxy error: ${data.error}`);
                     }
                     
-                    let content = data.content;
-                    
-                    // CRITICAL STEP: Sanitize content to prevent internal site redirects (Base tag manipulation)
-                    // The 'base' tag often causes the proxied site to try and redirect itself, breaking the proxy.
-                    content = content.replace(/<head>/i, '<head><base href="' + url + '">');
-                    
-                    // Success! Display the content using innerHTML
-                    // NOTE: This insertion method is required for the external site's CSS/JS/images to attempt loading,
-                    // despite the known CORS issues which are unavoidable in a client-side proxy environment.
-                    proxyResultContainer.innerHTML = content;
+                    // Success! Display the content in the iframe
+                    writeToIframe(data.content);
                     
                     // Hide the input form and show the result view
                     initialForm.classList.add('hidden');
