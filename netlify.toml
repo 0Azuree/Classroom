@@ -5,4 +5,3 @@
 [functions]
     # Configure the runtime settings for Node.js functions
     node_bundler = "zisi"
-    node_bundler_version = "v8"
