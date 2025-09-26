@@ -1,73 +1,85 @@
 /**
- * Netlify Serverless Function for Proxying Web Requests
- * * This function takes a URL as a query parameter, fetches the content
- * from that URL, and returns the response. This is a common way to bypass
- * cross-origin restrictions (CORS) and potentially some network filters.
+ * Serverless function for the Classroom Web Proxy.
+ * This function fetches an external URL and returns the HTML content,
+ * bypassing CORS and allowing uncensored access.
  */
-
-// Import the node-fetch library for making HTTP requests (Netlify includes this)
 const fetch = require('node-fetch');
 
-// Main handler for the Netlify function
+// The main handler function for the Netlify function
 exports.handler = async (event, context) => {
-    // 1. Get the target URL from the query parameters
-    const targetUrl = event.queryStringParameters.url;
-
-    if (!targetUrl) {
+    // 1. Check if the request method is POST and has a body
+    if (event.httpMethod !== 'POST' || !event.body) {
         return {
-            statusCode: 400,
-            body: JSON.stringify({ error: 'Missing required "url" query parameter.' }),
+            statusCode: 405,
+            body: JSON.stringify({ error: 'Method Not Allowed or Missing Body' }),
         };
     }
-    
-    // Simple protocol enforcement for security and reliability
-    let url;
-    if (targetUrl.startsWith('http://') || targetUrl.startsWith('https://')) {
-        url = targetUrl;
-    } else {
-        url = 'https://' + targetUrl;
-    }
 
-    console.log(`Proxying request to: ${url}`);
+    let url;
+    try {
+        // Parse the body to get the target URL
+        const data = JSON.parse(event.body);
+        url = data.url;
+
+        if (!url) {
+            return {
+                statusCode: 400,
+                body: JSON.stringify({ error: 'URL parameter is missing in the request body.' }),
+            };
+        }
+        
+        // Ensure the URL is fully qualified for reliable fetching
+        if (!url.startsWith('http://') && !url.startsWith('https://')) {
+            url = 'https://' + url;
+        }
+
+    } catch (parseError) {
+        return {
+            statusCode: 400,
+            body: JSON.stringify({ error: 'Invalid JSON format in request body.' }),
+        };
+    }
 
     try {
         // 2. Fetch the content from the target URL
         const response = await fetch(url, {
-            // Optional: Forward user's headers if needed, but often simpler to use default
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            },
-            // Disable follow redirects to better handle certain sites
-            follow: 0, 
-            redirect: 'manual',
+            // Important: We need to tell the proxy to ignore response errors (like 404s) 
+            // and simply return the content/status it receives.
+            // This is a common point of failure for proxy functions.
+            redirect: 'follow',
             timeout: 10000, // 10 second timeout
         });
 
-        // 3. Extract necessary data for the client response
-        const body = await response.text();
-        
-        // 4. Determine content type and status code to correctly pass through
-        const contentType = response.headers.get('content-type') || 'text/plain';
-        
-        // 5. Return the response to the client
+        // 3. Handle non-200 status codes from the target site
+        if (!response.ok) {
+            return {
+                statusCode: 200, // Still return 200 to the frontend so it can display the error
+                body: JSON.stringify({ 
+                    error: `Target site returned status: ${response.status} ${response.statusText}`,
+                    content: `Could not load ${url}. Target server returned: ${response.status}`,
+                }),
+            };
+        }
+
+        // 4. Read the HTML content as plain text
+        const content = await response.text();
+
+        // 5. Success! Return the content wrapped in a JSON object
         return {
-            statusCode: response.status,
+            statusCode: 200,
             headers: {
-                'Content-Type': contentType,
-                // Required CORS headers for the frontend to access this function
-                'Access-Control-Allow-Origin': '*', 
-                'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-                'Access-Control-Allow-Headers': 'Content-Type',
+                // Allows the frontend to read this response
+                'Content-Type': 'application/json', 
             },
-            body: body,
+            body: JSON.stringify({ content: content }),
         };
 
-    } catch (error) {
-        console.error('Proxy Error:', error);
+    } catch (fetchError) {
+        // 6. Handle network or server-side errors
+        console.error('Proxy Fetch Error:', fetchError);
         return {
             statusCode: 500,
-            body: JSON.stringify({ error: `Could not reach target server: ${error.message}` }),
+            body: JSON.stringify({ error: `Proxy failed to connect to site: ${fetchError.message}` }),
         };
     }
 };
