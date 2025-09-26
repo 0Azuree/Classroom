@@ -16,68 +16,55 @@
     <script src="https://cdn.tailwindcss.com"></script>
     
     <style>
-        /* Custom CSS for a subtle glow effect on the box */
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        .fade-in {
-            animation: fadeIn 1.5s ease-in-out forwards;
-        }
-
-        .inner-box-shadow {
-            box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
-            transition: box-shadow 0.3s ease-in-out;
-        }
-
-        .inner-box-shadow:hover {
-            box-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
-        }
-
         /* Light glowing effect for text */
         .text-glow {
             text-shadow: 0 0 8px rgba(255, 255, 255, 0.6), 0 0 15px rgba(255, 255, 255, 0.4);
             transition: text-shadow 0.3s ease-in-out;
         }
+
+        /* Modern button style with glow */
+        .modern-button {
+            transition: all 0.3s ease;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+        }
+
+        .modern-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+        }
+
+        /* The specific rectangular box style from your image */
+        .glowing-box {
+            background-color: rgba(0, 0, 0, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.7);
+            border-radius: 12px;
+            box-shadow: 0 0 30px rgba(255, 255, 255, 0.5);
+        }
     </style>
 </head>
-<body class="bg-black text-white flex items-center justify-center min-h-screen">
-    
-    <!-- Main content container -->
-    <div class="container mx-auto px-4 flex items-center justify-center text-center">
-        <!-- Inner box container -->
-        <div class="
-            bg-black
-            border border-white border-opacity-50
-            w-[calc(100vw-4rem)] md:w-4/5 lg:w-3/5
-            max-w-4xl
-            rounded-2xl
-            flex flex-col items-center justify-center
-            p-8
-            inner-box-shadow
-        ">
-            <!-- Website Title -->
-            <h1 class="text-4xl sm:text-6xl md:text-8xl font-bold fade-in text-glow">
-                Classroom
-            </h1>
+<body class="bg-black text-white font-sans flex items-center justify-center min-h-screen p-4">
 
-            <!-- Button for AI tool, now a link -->
-            <a href="ai.html" class="
-                mt-8
-                bg-black
-                text-white
-                py-2 px-6
-                rounded-full
-                border border-white border-opacity-50
-                hover:bg-white hover:text-black
-                transition-all duration-300
-                text-sm sm:text-base md:text-lg
-                font-medium
-                text-glow
-            ">
-                AI
+    <!-- Central Glowing Rectangular Box -->
+    <div class="glowing-box p-8 md:p-12 w-full max-w-lg text-center">
+        
+        <!-- Title -->
+        <h1 class="text-5xl md:text-7xl font-extrabold text-white text-glow mb-10">
+            Classroom
+        </h1>
+
+        <!-- Tool Buttons -->
+        <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 justify-center">
+            
+            <!-- AI Button -->
+            <a href="ai.html" class="modern-button bg-black text-white py-3 px-6 rounded-full border border-white border-opacity-70 text-base font-semibold hover:bg-white hover:text-black focus:outline-none focus:ring-4 focus:ring-white focus:ring-opacity-50">
+                AI Assistant
             </a>
+            
+            <!-- Proxy Button -->
+            <a href="proxy.html" class="modern-button bg-black text-white py-3 px-6 rounded-full border border-white border-opacity-70 text-base font-semibold hover:bg-white hover:text-black focus:outline-none focus:ring-4 focus:ring-white focus:ring-opacity-50">
+                Web Proxy
+            </a>
+
         </div>
     </div>
 </body>
