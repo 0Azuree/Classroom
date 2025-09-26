@@ -93,7 +93,6 @@
     
     <!-- Proxy Result Container (Content will be inserted here) -->
     <div id="proxy-result-container" class="hidden">
-        <!-- Removed sandbox to allow content to execute more freely, increasing compatibility -->
         <iframe id="proxy-iframe" title="Proxied Content"></iframe>
     </div>
 
@@ -163,8 +162,21 @@
                         throw new Error(`Proxy error: ${data.error}`);
                     }
                     
-                    // Success! Display the content in the iframe
-                    writeToIframe(data.content);
+                    let content = data.content;
+                    
+                    // CRITICAL FIX: Inject a <base> tag to resolve all relative paths (CSS, images) 
+                    // against the original domain. This is the main client-side workaround 
+                    // for the CORS errors you are seeing.
+                    const baseUrl = new URL(url).origin;
+                    content = content.replace(/<head>/i, `<head><base href="${baseUrl}/">`);
+
+                    // Clean out common disruptive elements (like CSP, X-Frame headers, etc.)
+                    // Note: This relies on the function having already removed the server headers.
+                    content = content.replace(/<meta\s+http-equiv="Content-Security-Policy"[^>]*>/i, '');
+                    content = content.replace(/<meta\s+http-equiv="X-Frame-Options"[^>]*>/i, '');
+                    
+                    // Success! Display the cleaned content in the iframe
+                    writeToIframe(content);
                     
                     // Hide the input form and show the result view
                     initialForm.classList.add('hidden');
@@ -172,7 +184,7 @@
 
                 } catch (error) {
                     console.error('Fetch Error:', error);
-                    errorMessage.textContent = `Failed to load site. Ensure the URL is correct and the Netlify Function is deployed. (${error.message})`;
+                    errorMessage.textContent = `Failed to load site. Ensure the URL is correct and the Netlify Function is deployed. (${error.message}). Try a simpler URL (e.g., example.com).`;
                     errorMessage.classList.remove('hidden');
                     initialForm.classList.remove('hidden');
                     proxyResultContainer.classList.add('hidden');
