@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en" class="bg-black">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Classroom | Proxy</title>
+    <!-- Favicon link -->a
+    <link rel="icon" type="image/png" href="favicon.png">
+    
+    <!-- Google Fonts for a modern look -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        /* Light glowing effect for text */
+        .text-glow {
+            text-shadow: 0 0 8px rgba(255, 255, 255, 0.6), 0 0 15px rgba(255, 255, 255, 0.4);
+            transition: text-shadow 0.3s ease-in-out;
+        }
+
+        /* Glowing input box style */
+        .glowing-input {
+            transition: all 0.3s ease;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+        }
+
+        .glowing-input:focus {
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+        }
+    </style>
+</head>
+<body class="bg-black text-white font-sans flex flex-col items-center justify-center min-h-screen p-4">
+    
+    <!-- Header with Back Link -->
+    <header class="fixed top-0 left-0 right-0 p-4 border-b border-zinc-700 flex justify-between items-center bg-black bg-opacity-80 backdrop-blur-sm z-10">
+        <h1 class="text-2xl font-bold text-glow">Web Proxy</h1>
+        <a href="index.html" class="text-white hover:text-zinc-400 transition-colors duration-300">
+            &larr; Go Back
+        </a>
+    </header>
+
+    <!-- Main Content centered on the page -->
+    <div class="text-center mt-20 p-6 md:p-8 w-full max-w-2xl">
+        <p class="text-lg mb-8 text-zinc-400">
+            The Web Proxy is not yet operational. You can use the form below to enter a URL once the backend is ready.
+        </p>
+        
+        <!-- Input Form (Placeholder for Proxy Functionality) -->
+        <div class="flex flex-col space-y-4">
+            <input type="url" id="proxy-url" placeholder="Enter URL (e.g., https://example.com)"
+                   class="glowing-input bg-zinc-900 border border-white border-opacity-30 rounded-full py-3 px-6 text-white text-lg focus:outline-none focus:border-white w-full">
+            
+            <button id="proxy-button"
+                    class="glowing-input bg-white text-black py-3 px-8 rounded-full text-xl font-semibold hover:bg-zinc-200 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-white focus:ring-opacity-50">
+                Access Site
+            </button>
+        </div>
+
+        <!-- Placeholder Warning/Note -->
+        <div class="mt-8 p-4 bg-zinc-900 border border-zinc-700 rounded-lg text-sm text-zinc-500 text-left">
+            <p><strong>Note on Web Proxies:</strong> Full proxy functionality that bypasses network filters requires complex server-side infrastructure. This page provides the front-end user experience.</p>
+        </div>
+    </div>
+</body>
+</html>
