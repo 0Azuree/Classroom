@@ -43,14 +43,12 @@
             height: calc(100vh - 70px);
             z-index: 5;
             display: none; /* Initially hidden */
+            padding: 1rem;
+            overflow-y: auto; /* Allow scrolling for content */
+            color: black; /* Default color for embedded HTML */
+            background-color: white; /* Ensure visibility of proxied content */
         }
         
-        #proxy-iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
-        }
-
         /* Ensure the body takes up the full screen */
         body {
             height: 100vh;
@@ -92,7 +90,7 @@
     
     <!-- Proxy Result Container (Content will be inserted here) -->
     <div id="proxy-result-container" class="hidden">
-        <iframe id="proxy-iframe" sandbox="allow-scripts allow-forms allow-same-origin"></iframe>
+        <!-- Content will be inserted by JavaScript using innerHTML -->
     </div>
 
     <script>
@@ -101,7 +99,6 @@
             const proxyButton = document.getElementById('proxy-button');
             const initialForm = document.getElementById('initial-form');
             const proxyResultContainer = document.getElementById('proxy-result-container');
-            const proxyIframe = document.getElementById('proxy-iframe');
             const errorMessage = document.getElementById('error-message');
             const loadingMessage = document.getElementById('loading-message');
 
@@ -142,11 +139,16 @@
                         throw new Error(`Proxy error: ${data.error}`);
                     }
                     
-                    // Success! Display the content in the iframe
-                    const content = data.content;
+                    let content = data.content;
                     
-                    // Get the iframe's document and write the proxied HTML content to it
-                    proxyIframe.srcdoc = content;
+                    // CRITICAL STEP: Sanitize content to prevent internal site redirects (Base tag manipulation)
+                    // The 'base' tag often causes the proxied site to try and redirect itself, breaking the proxy.
+                    content = content.replace(/<head>/i, '<head><base href="' + url + '">');
+                    
+                    // Success! Display the content using innerHTML
+                    // NOTE: This insertion method is required for the external site's CSS/JS/images to attempt loading,
+                    // despite the known CORS issues which are unavoidable in a client-side proxy environment.
+                    proxyResultContainer.innerHTML = content;
                     
                     // Hide the input form and show the result view
                     initialForm.classList.add('hidden');
