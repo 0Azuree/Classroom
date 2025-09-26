@@ -4,15 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Classroom | Proxy</title>
-    <!-- Favicon link -->
     <link rel="icon" type="image/png" href="favicon.png">
     
-    <!-- Google Fonts for a modern look -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
     
-    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     
     <style>
@@ -58,7 +55,6 @@
 </head>
 <body class="bg-black text-white font-sans flex flex-col items-center justify-center h-screen p-0">
     
-    <!-- Header with Back Link and Title -->
     <header class="fixed top-0 left-0 right-0 p-4 border-b border-zinc-700 flex justify-between items-center bg-black z-20 h-[70px]">
         <h1 class="text-2xl font-bold text-glow">Web Proxy</h1>
         <a href="index.html" class="text-white hover:text-zinc-400 transition-colors duration-300">
@@ -66,13 +62,11 @@
         </a>
     </header>
 
-    <!-- Initial Input Form -->
     <div id="initial-form" class="text-center p-6 md:p-8 w-full max-w-2xl z-10 flex flex-col items-center justify-center h-full">
         <p class="text-lg mb-8 text-zinc-400 text-glow">
             Enter the URL of the website you wish to access.
         </p>
         
-        <!-- Input Form -->
         <div class="flex flex-col space-y-4 w-full">
             <input type="text" id="proxy-url" placeholder="Enter URL (e.g., example.com or https://example.com)"
                    class="glowing-input bg-zinc-900 border border-white border-opacity-30 rounded-full py-3 px-6 text-white text-lg focus:outline-none focus:border-white w-full"
@@ -88,10 +82,8 @@
         <div id="loading-message" class="mt-4 text-sm text-white hidden text-glow">Loading... Please wait.</div>
     </div>
     
-    <!-- Proxy Result Container (Content will be inserted here) -->
     <div id="proxy-result-container" class="hidden">
-        <!-- Content inserted by JavaScript -->
-    </div>
+        </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
@@ -123,20 +115,28 @@
                 loadingMessage.classList.remove('hidden');
                 
                 // This is the URL path for your Netlify Function
-                const functionUrl = `/.netlify/functions/proxy?url=${encodeURIComponent(url)}`;
+                // We use a POST request and send the URL in the body
+                const functionUrl = `/.netlify/functions/proxy`;
 
                 try {
-                    const response = await fetch(functionUrl);
+                    const response = await fetch(functionUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json' // Essential for the function to read the body
+                        },
+                        body: JSON.stringify({ url: url }) // Send the URL in the body
+                    });
 
-                    if (!response.ok) {
-                        const errorBody = await response.json();
-                        throw new Error(`Proxy error: ${errorBody.error || response.statusText}`);
+                    // We expect the function to return JSON
+                    const data = await response.json();
+
+                    if (data.error) {
+                        // Function returned a JSON error (either 405 or a 500)
+                        throw new Error(`Proxy error: ${data.error}`);
                     }
-
-                    const htmlContent = await response.text();
                     
-                    // Display the content
-                    proxyResultContainer.innerHTML = htmlContent;
+                    // Success! Display the content
+                    proxyResultContainer.innerHTML = data.content;
                     
                     // Hide the input form and show the result view
                     initialForm.classList.add('hidden');
