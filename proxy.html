@@ -131,6 +131,11 @@
                         if (iframeDoc.body && iframeDoc.body.children.length === 0) {
                             iframeDoc.body.innerHTML = '<div style="padding: 20px; font-family: sans-serif; text-align: center; color: #111;">Could not display proxied content. The target site may be actively blocking proxies or loading external resources that failed.</div>';
                         }
+                        
+                        // Ensure the form stays hidden and the iframe is visible upon success
+                        initialForm.classList.add('hidden');
+                        proxyResultContainer.classList.remove('hidden');
+
                     }, 50); // Small delay
                 } catch (e) {
                     console.error("Error writing to iframe:", e);
@@ -142,6 +147,8 @@
              */
             async function loadProxy() {
                 let url = urlInput.value.trim();
+                let data = null; // Variable to hold parsed JSON data
+                let response = null; // Variable to hold fetch response
 
                 if (!url) {
                     errorMessage.textContent = "Please enter a URL.";
@@ -161,7 +168,7 @@
                 const functionUrl = `/.netlify/functions/proxy`;
 
                 try {
-                    const response = await fetch(functionUrl, {
+                    response = await fetch(functionUrl, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
@@ -169,47 +176,44 @@
                         body: JSON.stringify({ url: url })
                     });
 
-                    // Check if the serverless function responded successfully (HTTP 200)
+                    // 1. Check if the serverless function responded successfully (HTTP 200 range)
                     if (!response.ok) {
-                         // The response may not be JSON if the function itself failed (e.g., Netlify error)
                         const errorText = await response.text();
-                        throw new Error(`Proxy function failed: ${response.status} ${response.statusText}. Details: ${errorText.substring(0, 100)}...`);
+                        throw new Error(`Proxy function failed with HTTP ${response.status} ${response.statusText}. Details: ${errorText.substring(0, 100)}...`);
                     }
 
-                    const data = await response.json();
+                    // 2. Try to parse the response as JSON. This is where it often fails if the function crashed.
+                    try {
+                        data = await response.json();
+                    } catch (e) {
+                        throw new Error("Proxy response error: Failed to parse server response as JSON. The Netlify function likely failed internally.");
+                    }
 
-                    // Check for an application-level error returned in the JSON body
+                    // 3. Check for an application-level error returned in the JSON body
                     if (data.error) {
-                        throw new Error(`Proxy error: ${data.error}`);
+                        throw new Error(`Proxy application error: ${data.error}`);
                     }
                     
                     let content = data.content;
                     
                     // CRITICAL FIX: Inject a <base> tag to resolve all relative paths (CSS, images) 
-                    // against the original domain. This is the main client-side workaround 
-                    // for the CORS errors you are seeing.
-                    // Note: Use the original URL for the base tag, not the potentially modified 'url' variable
-                    // This is robust because the original function assumed the URL was valid
+                    // against the original domain.
                     const baseUrl = new URL(url).origin;
                     
                     // Inject <base href> right after the opening <head> tag
                     content = content.replace(/<head\s*>/i, `<head><base href="${baseUrl}/">`);
 
                     // Clean out common disruptive elements (like CSP, X-Frame headers, etc.)
-                    // Note: This relies on the function having already removed the server headers.
+                    // This is a crucial client-side guard against X-Frame and CSP blocks.
                     content = content.replace(/<meta\s+http-equiv="Content-Security-Policy"[^>]*>/i, '');
                     content = content.replace(/<meta\s+http-equiv="X-Frame-Options"[^>]*>/i, '');
                     
                     // Success! Display the cleaned content in the iframe
                     writeToIframe(content);
                     
-                    // Hide the input form and show the result view
-                    initialForm.classList.add('hidden');
-                    proxyResultContainer.classList.remove('hidden');
-
                 } catch (error) {
-                    console.error('Fetch Error:', error);
-                    errorMessage.textContent = `Failed to load site. (${error.message}). Try a simpler URL (e.g., example.com) or check your Netlify function.`;
+                    console.error('Fetch/Proxy Error:', error);
+                    errorMessage.textContent = `Failed to load site. (${error.message}). Try a simpler URL (e.g., example.com) or check your Netlify function code.`;
                     errorMessage.classList.remove('hidden');
                     
                     // Show input form and hide the result container on failure
