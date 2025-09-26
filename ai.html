@@ -26,27 +26,37 @@
         .floating-input-box {
             position: fixed;
             bottom: 0;
-            left: 0;
-            right: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 95%;
+            max-width: 800px;
             backdrop-filter: blur(5px);
             background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent black */
-            box-shadow: 0 -4px 10px rgba(255, 255, 255, 0.2);
+            box-shadow: 0 0 15px rgba(100, 100, 100, 0.4);
         }
-
+        
         /* Chat history container */
         .chat-container {
             flex-grow: 1;
             padding-bottom: 8rem; /* Space for the floating box */
+        }
+
+        /* Custom focus ring to match the theme */
+        .focus-ring-gray:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(100, 100, 100, 0.5);
         }
     </style>
 </head>
 <body class="bg-black text-white font-sans flex flex-col min-h-screen">
     
     <!-- Main Header -->
-    <header class="p-4 border-b border-gray-700 flex justify-between items-center">
-        <h1 class="text-2xl font-bold text-glow">Classroom AI</h1>
-        <a href="index.html" class="text-white hover:text-gray-400 transition-colors duration-300">
-            &larr; Back to Home
+    <header class="p-4 border-b border-zinc-700 flex justify-between items-center">
+        <a href="index.html" class="flex items-center space-x-2">
+            <h1 class="text-2xl font-bold text-glow">Classroom AI</h1>
+        </a>
+        <a href="index.html" class="text-white hover:text-zinc-400 transition-colors duration-300">
+            &larr; Go Back
         </a>
     </header>
 
@@ -58,7 +68,7 @@
     </main>
 
     <!-- Floating Input Form -->
-    <div class="floating-input-box p-4 border-t border-gray-700">
+    <div class="floating-input-box p-4 border border-white border-opacity-50 rounded-full mb-4">
         <!-- Image preview container -->
         <div id="image-preview-container" class="mb-2 hidden">
             <img id="image-preview" src="#" alt="Image Preview" class="max-h-32 rounded-lg object-cover">
@@ -67,17 +77,17 @@
             </button>
         </div>
         
-        <div class="flex items-center space-x-4">
-            <input type="text" id="user-input" placeholder="Ask me anything..." 
-                   class="flex-1 bg-gray-800 border border-gray-600 rounded-full py-2 px-4 text-white focus:outline-none focus:ring-2 focus:ring-white">
-            
-            <label for="image-upload" class="cursor-pointer">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white hover:text-gray-400 transition-colors duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <div class="flex items-center space-x-2 w-full">
+            <label for="image-upload" class="cursor-pointer bg-black text-white p-2 rounded-full border border-white border-opacity-50 hover:bg-white hover:text-black transition-all duration-300">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
             </label>
             <input type="file" id="image-upload" class="hidden" accept="image/*">
-
+            
+            <input type="text" id="user-input" placeholder="Ask me anything..." 
+                   class="flex-1 bg-zinc-800 border border-zinc-600 rounded-full py-2 px-4 text-white focus:outline-none focus-ring-gray">
+            
             <button id="send-button"
                     class="bg-black text-white p-2 rounded-full border border-white border-opacity-50 hover:bg-white hover:text-black transition-all duration-300">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -99,7 +109,7 @@
 
         let uploadedImage = null;
         
-        // The API key is handled by the Canvas environment.
+        // The API key is now handled by the Canvas environment. 
         const apiKey = "AIzaSyBkF5SecqmNeEZNtBmWU-534AeHeLyik8U"; 
 
         async function fetchWithExponentialBackoff(url, options, retries = 5, delay = 1000) {
@@ -118,6 +128,48 @@
             }
         }
 
+        // Function to resize and compress the image
+        function resizeImage(file, maxWidth, maxHeight, quality) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        let width = img.width;
+                        let height = img.height;
+
+                        if (width > height) {
+                            if (width > maxWidth) {
+                                height = Math.round(height * maxWidth / width);
+                                width = maxWidth;
+                            }
+                        } else {
+                            if (height > maxHeight) {
+                                width = Math.round(width * maxHeight / height);
+                                height = maxHeight;
+                            }
+                        }
+
+                        canvas.width = width;
+                        canvas.height = height;
+
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+
+                        canvas.toBlob(blob => {
+                            const reader = new FileReader();
+                            reader.onloadend = () => resolve(reader.result);
+                            reader.readAsDataURL(blob);
+                        }, 'image/jpeg', quality);
+                    };
+                    img.src = event.target.result;
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
         async function sendMessage() {
             const prompt = userInput.value.trim();
             const hasImage = uploadedImage !== null;
@@ -131,7 +183,7 @@
 
             const loadingIndicator = document.createElement('div');
             loadingIndicator.textContent = "Typing...";
-            loadingIndicator.className = "text-gray-500 italic mb-2";
+            loadingIndicator.className = "text-zinc-500 italic mb-2";
             chatHistory.appendChild(loadingIndicator);
             chatHistory.scrollTop = chatHistory.scrollHeight;
 
@@ -160,6 +212,11 @@
                     body: JSON.stringify(payload)
                 });
                 
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error.message || `API call failed with status ${response.status}`);
+                }
+                
                 const result = await response.json();
                 
                 if (result.candidates && result.candidates.length > 0 && result.candidates[0].content) {
@@ -178,7 +235,7 @@
 
         function appendMessage(sender, text, imageData = null) {
             const messageContainer = document.createElement('div');
-            messageContainer.className = `p-3 rounded-xl max-w-[80%] ${sender === 'user' ? 'bg-gray-800 self-end ml-auto' : 'bg-gray-900 border border-gray-700'}`;
+            messageContainer.className = `p-3 rounded-xl max-w-[80%] ${sender === 'user' ? 'bg-zinc-800 self-end ml-auto' : 'bg-zinc-900 border border-zinc-700'}`;
             messageContainer.style.wordBreak = "break-word";
             
             if (imageData) {
@@ -198,14 +255,17 @@
             chatHistory.scrollTop = chatHistory.scrollHeight;
         }
 
-        function handleImage(file) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                uploadedImage = e.target.result;
+        async function handleImage(file) {
+            try {
+                // Resize and compress the image before processing
+                const resizedDataUrl = await resizeImage(file, 1024, 1024, 0.7);
+                uploadedImage = resizedDataUrl;
                 imagePreview.src = uploadedImage;
                 imagePreviewContainer.classList.remove('hidden');
-            };
-            reader.readAsDataURL(file);
+            } catch (error) {
+                console.error("Error processing image:", error);
+                // Optionally, inform the user with a message
+            }
         }
 
         function removeImage() {
