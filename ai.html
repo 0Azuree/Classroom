@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en" class="bg-black">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Classroom | AI</title>
+    <!-- Favicon link -->
+    <link rel="icon" type="image/png" href="favicon.png">
+    
+    <!-- Google Fonts for a modern look -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        /* Light glowing effect for text */
+        .text-glow {
+            text-shadow: 0 0 8px rgba(255, 255, 255, 0.6), 0 0 15px rgba(255, 255, 255, 0.4);
+            transition: text-shadow 0.3s ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-black text-white font-sans flex flex-col min-h-screen">
+    
+    <!-- Main Header -->
+    <header class="p-4 border-b border-gray-700 flex justify-between items-center">
+        <h1 class="text-2xl font-bold text-glow">Classroom AI</h1>
+        <a href="index.html" class="text-white hover:text-gray-400 transition-colors duration-300">
+            &larr; Back to Home
+        </a>
+    </header>
+
+    <!-- Main chat container -->
+    <main class="flex-1 flex flex-col overflow-hidden p-4">
+        <div id="chat-history" class="flex-1 overflow-y-auto space-y-4">
+            <!-- Chat messages will be added here -->
+        </div>
+    </main>
+
+    <!-- Input form -->
+    <div class="p-4 border-t border-gray-700">
+        <div class="flex items-center space-x-4">
+            <input type="text" id="user-input" placeholder="Ask me anything..." 
+                   class="flex-1 bg-gray-800 border border-gray-600 rounded-full py-2 px-4 text-white focus:outline-none focus:ring-2 focus:ring-white">
+            <button id="send-button"
+                    class="bg-black text-white p-2 rounded-full border border-white border-opacity-50 hover:bg-white hover:text-black transition-all duration-300">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const chatHistory = document.getElementById('chat-history');
+        const userInput = document.getElementById('user-input');
+        const sendButton = document.getElementById('send-button');
+        
+        // This is a placeholder for your API key. Replace it with your key.
+        const apiKey = "";
+        
+        async function fetchWithExponentialBackoff(url, options, retries = 5, delay = 1000) {
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (response.status !== 429) {
+                        return response;
+                    }
+                } catch (error) {
+                    if (i === retries - 1) {
+                        throw error;
+                    }
+                }
+                await new Promise(resolve => setTimeout(resolve, delay * Math.pow(2, i)));
+            }
+        }
+
+        async function sendMessage() {
+            const prompt = userInput.value.trim();
+            if (prompt === "") return;
+
+            // Add user message to chat history
+            appendMessage('user', prompt);
+            userInput.value = '';
+
+            const loadingIndicator = document.createElement('div');
+            loadingIndicator.textContent = "Typing...";
+            loadingIndicator.className = "text-gray-500 italic mb-2";
+            chatHistory.appendChild(loadingIndicator);
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+
+            try {
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+                const payload = {
+                    contents: [{ parts: [{ text: prompt }] }],
+                };
+
+                const response = await fetchWithExponentialBackoff(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const result = await response.json();
+                
+                if (result.candidates && result.candidates.length > 0 && result.candidates[0].content) {
+                    const botResponse = result.candidates[0].content.parts[0].text;
+                    appendMessage('bot', botResponse);
+                } else {
+                    appendMessage('bot', 'Sorry, I couldn\'t get a response. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error fetching response:', error);
+                appendMessage('bot', 'An error occurred. Please try again later.');
+            } finally {
+                loadingIndicator.remove();
+            }
+        }
+
+        function appendMessage(sender, text) {
+            const messageContainer = document.createElement('div');
+            messageContainer.className = `p-3 rounded-xl max-w-[80%] ${sender === 'user' ? 'bg-gray-800 self-end ml-auto' : 'bg-gray-900 border border-gray-700'}`;
+            messageContainer.style.wordBreak = "break-word";
+
+            // Markdown to HTML conversion
+            const htmlText = marked.parse(text);
+            const markdownDiv = document.createElement('div');
+            markdownDiv.innerHTML = htmlText;
+            messageContainer.appendChild(markdownDiv);
+            
+            chatHistory.appendChild(messageContainer);
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+
+        // Event listeners
+        sendButton.addEventListener('click', sendMessage);
+        userInput.addEventListener('keypress', (event) => {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</body>
+</html>
