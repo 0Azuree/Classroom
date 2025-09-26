@@ -116,8 +116,8 @@
                     iframeDoc.write(content);
                     iframeDoc.close();
 
-                    // Check if content was actually written (basic check)
-                    if (iframeDoc.body.children.length === 0) {
+                    // FIX: Safely check if the iframe body exists and has content
+                    if (iframeDoc.body && iframeDoc.body.children.length === 0) {
                         iframeDoc.body.innerHTML = '<div style="padding: 20px; font-family: sans-serif;">Could not display proxied content. The target site may be actively blocking proxies or loading external resources that failed.</div>';
                     }
                 } catch (e) {
