@@ -100,7 +100,7 @@
         let uploadedImage = null;
         
         // The API key is handled by the Canvas environment.
-        const apiKey = "AIzaSyBkF5SecqmNeEZNtBmWU-534AeHeLyik8U"; 
+        const apiKey = ""; 
 
         async function fetchWithExponentialBackoff(url, options, retries = 5, delay = 1000) {
             for (let i = 0; i < retries; i++) {
@@ -149,7 +149,7 @@
             }
 
             try {
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`;
                 const payload = {
                     contents: [{ parts: contents }],
                 };
